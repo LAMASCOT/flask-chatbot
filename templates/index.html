@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chatbot Confluence</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body, html {
+      height: 100%;
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .chat-container {
+      max-width: 750px;
+      margin: 30px auto;
+      display: flex;
+      flex-direction: column;
+      height: 90vh;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      background-color: white;
+    }
+
+    .header {
+      background: #3f51b5;
+      color: white;
+      padding: 15px;
+      font-size: 1.3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .messages {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background-color: #f8f9fa;
+    }
+
+    .message-wrapper {
+      display: flex;
+      margin-bottom: 20px;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 15px 20px;
+      border-radius: 15px;
+      word-wrap: break-word;
+      font-size: 16px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      position: relative;
+    }
+
+    .timestamp {
+      font-size: 0.75rem;
+      color: #6c757d;
+      margin-top: 5px;
+    }
+
+    .user-message {
+      background-color: #007bff;
+      color: white;
+      align-self: flex-end;
+      border-top-right-radius: 0;
+    }
+
+    .bot-message {
+      background-color: #e2e3e5;
+      color: #212529;
+      align-self: flex-start;
+      border-top-left-radius: 0;
+    }
+
+    .user-wrapper {
+      justify-content: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .input-group {
+      padding: 15px;
+      background: #ffffff;
+      border-top: 1px solid #ccc;
+      gap: 10px;
+    }
+
+    #clear-history-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 0 10px;
+    }
+
+    #clear-history-btn:hover {
+      background-color: #c82333;
+    }
+
+    select#personalitySelect {
+      max-width: 300px;
+    }
+
+    .image-preview {
+      margin-top: 10px;
+      max-width: 100%;
+      border-radius: 10px;
+    }
+
+    .image-description {
+      font-style: italic;
+      color: #333;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="header">
+      <span>🤖 Chatbot Confluence</span>
+      <select id="personalitySelect" class="form-select form-select-sm w-auto">
+        <option value="assistant_rh">Assistant RH</option>
+        <option value="support_tech">Support Tech</option>
+        <option value="assistant_doc" selected>Assistant Documentation</option>
+      </select>
+    </div>
+
+    <div id="messages" class="messages"></div>
+
+    <form id="chatForm" class="input-group">
+      <input id="messageInput" type="text" class="form-control" placeholder="Pose ta question..." autocomplete="off" required />
+      <input type="file" id="fileInput" class="form-control" style="max-width: 200px;" />
+      <button class="btn btn-primary" type="submit">Envoyer</button>
+      <button id="clear-history-btn" type="button">🗑️</button>
+    </form>
+  </div>
+
+  <script>
+    const messagesDiv = document.getElementById('messages');
+    const chatForm = document.getElementById('chatForm');
+    const messageInput = document.getElementById('messageInput');
+    const personalitySelect = document.getElementById('personalitySelect');
+    const fileInput = document.getElementById('fileInput');
+    const historyKey = 'chatHistoryConfluence';
+
+    let chatHistory = JSON.parse(localStorage.getItem(historyKey)) || [];
+    renderMessages();
+
+    function formatTime(dateString) {
+      const date = new Date(dateString);
+      return `${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    function renderMessages() {
+      messagesDiv.innerHTML = '';
+      chatHistory.forEach(({ sender, text, timestamp, imageUrl, imageDescription }) => {
+        if (!sender || (!text && !imageUrl)) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('message-wrapper');
+        if (sender === 'user') wrapper.classList.add('user-wrapper');
+
+        const avatar = document.createElement('img');
+        avatar.classList.add('avatar');
+        avatar.src = sender === 'user'
+          ? 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
+          : 'https://cdn-icons-png.flaticon.com/512/4712/4712107.png';
+        avatar.alt = sender;
+
+        const msg = document.createElement('div');
+        msg.classList.add('message');
+        msg.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
+
+        if (text) {
+          const textNode = document.createElement('div');
+          textNode.innerHTML = text;
+          msg.appendChild(textNode);
+        }
+
+        if (imageUrl) {
+          const img = document.createElement('img');
+          img.src = imageUrl;
+          img.alt = 'Image';
+          img.classList.add('image-preview');
+          msg.appendChild(img);
+        }
+
+        if (imageDescription) {
+          const desc = document.createElement('div');
+          desc.classList.add('image-description');
+          desc.textContent = imageDescription;
+          msg.appendChild(desc);
+        }
+
+        const time = document.createElement('div');
+        time.className = 'timestamp';
+        time.textContent = formatTime(timestamp || new Date());
+        msg.appendChild(time);
+
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(msg);
+        messagesDiv.appendChild(wrapper);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function addMessage(sender, text, imageUrl = null, imageDescription = null) {
+      const timestamp = new Date().toISOString();
+      chatHistory.push({ sender, text, timestamp, imageUrl, imageDescription });
+      localStorage.setItem(historyKey, JSON.stringify(chatHistory));
+      renderMessages();
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const question = messageInput.value.trim();
+      messageInput.value = '';
+      if (!question && !fileInput.files.length) return;
+
+      addMessage('user', question || '📎 Fichier envoyé');
+
+      if (fileInput.files.length) {
+        const fileData = new FormData();
+        fileData.append('file', fileInput.files[0]);
+        try {
+          const uploadResp = await fetch('/upload', {
+            method: 'POST',
+            body: fileData,
+          });
+          const uploadResult = await uploadResp.json();
+          if (uploadResult.error) {
+            addMessage('bot', "❌ Erreur fichier : " + uploadResult.error);
+            resetInputs();
+            return;
+          }
+
+          const { filename, imageUrl, imageDescription } = uploadResult;
+          addMessage('bot', `✅ Fichier reçu : ${filename}`, imageUrl, imageDescription);
+        } catch (err) {
+          addMessage('bot', "❌ Erreur réseau (upload)");
+          resetInputs();
+          return;
+        }
+        fileInput.value = '';
+      }
+
+      try {
+        const response = await fetch('/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, personality: personalitySelect.value })
+        });
+        const data = await response.json();
+        if (data.error) {
+          addMessage('bot', "❌ " + data.error);
+        } else {
+          addMessage('bot', data.answer, data.imageUrl, data.imageDescription);
+        }
+      } catch (err) {
+        addMessage('bot', "❌ Erreur réseau (requête)");
+      }
+
+      messageInput.value = '';
+    });
+
+    function resetInputs() {
+      messageInput.value = '';
+      fileInput.value = '';
+    }
+
+    document.getElementById("clear-history-btn").addEventListener("click", function () {
+      if (confirm("Voulez-vous vraiment supprimer toute la conversation ?")) {
+        fetch("/history/clear", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        })
+        .then(response => response.json())
+        .then(data => {
+          alert(data.message);
+          localStorage.removeItem(historyKey);
+          location.reload();
+        })
+        .catch(error => console.error("Erreur :", error));
+      }
+    });
+
+    window.onload = async function () {
+      try {
+        const response = await fetch("/history");
+        const data = await response.json();
+
+        if (data.history && Array.isArray(data.history)) {
+          chatHistory = data.history.map(entry => [
+            { sender: 'user', text: entry.question, timestamp: new Date().toISOString() },
+            { sender: 'bot', text: entry.answer, timestamp: new Date().toISOString() }
+          ]).flat();
+          localStorage.setItem(historyKey, JSON.stringify(chatHistory));
+          renderMessages();
+        }
+      } catch (e) {
+        console.error("Erreur lors du chargement de l'historique :", e);
+      }
+    };
+  </script>
+</body>
+</html>

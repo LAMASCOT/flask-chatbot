@@ -1,0 +1,6 @@
+openai
+flask
+faiss-cpu
+requests
+tiktoken
+python-dotenv
