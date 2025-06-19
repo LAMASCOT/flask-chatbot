@@ -254,6 +254,11 @@ def clear_history():
     session.pop("history", None)
     return jsonify({"message": "Historique supprimé avec succès."})
 
+@app.route("/chat")
+def chat():
+    return render_template("chat.html")
+
+
 if __name__ == "__main__":
     debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     app.run(host="0.0.0.0", port=5000, debug=debug_mode)
