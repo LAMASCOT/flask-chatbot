@@ -7,7 +7,6 @@ import openpyxl
 from flask import Flask, request, jsonify, send_from_directory, render_template, session
 from flask_session import Session
 from werkzeug.utils import secure_filename
-from dotenv import load_dotenv
 
 from langchain.docstore.document import Document
 from langchain_community.vectorstores import FAISS
@@ -20,19 +19,19 @@ from langchain_openai import OpenAIEmbeddings
 from docx import Document as DocxDocument
 from pptx import Presentation
 
-# --- Chargement des variables d’environnement ---
-load_dotenv()
+# --- Chargement des variables d’environnement depuis l'environnement Render (PAS .env ici) ---
+USERNAME = os.environ.get("CONFLUENCE_USERNAME")
+API_TOKEN = os.environ.get("CONFLUENCE_API_TOKEN")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 CONFLUENCE_BASE_URL = "https://smartaps.atlassian.net/wiki"
-USERNAME = os.getenv("CONFLUENCE_USERNAME")
-API_TOKEN = os.getenv("CONFLUENCE_API_TOKEN")
 SPACE_KEY = "SAS"
 DOCS_DIR = "./docs"
 INDEX_DIR = "./faiss_index"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 UPLOAD_FOLDER = "./uploads"
 ALLOWED_EXTENSIONS = {"pdf", "txt", "docx", "pptx", "xlsx", "png", "jpg", "jpeg", "gif"}
 
+# --- Vérification des variables d'environnement ---
 if not USERNAME or not API_TOKEN or not OPENAI_API_KEY:
     raise EnvironmentError("CONFLUENCE_USERNAME, CONFLUENCE_API_TOKEN ou OPENAI_API_KEY manquants.")
 
@@ -99,7 +98,6 @@ def create_or_load_faiss_index():
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     docs = splitter.split_documents(documents)
-
     db = FAISS.from_documents(docs, embeddings)
     db.save_local(INDEX_DIR)
     return db
@@ -110,7 +108,6 @@ app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_FILE_DIR"] = "./flask_session"
 app.config["SESSION_PERMANENT"] = False
 Session(app)
-
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -258,5 +255,5 @@ def clear_history():
     return jsonify({"message": "Historique supprimé avec succès."})
 
 if __name__ == "__main__":
-    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     app.run(host="0.0.0.0", port=5000, debug=debug_mode)
