@@ -1,6 +1,14 @@
-openai
 flask
+gunicorn
+langchain
+langchain-community
+langchain-openai
+openai
+python-docx
+python-pptx
 faiss-cpu
+pdfplumber
 requests
-tiktoken
 python-dotenv
+flask-session
+werkzeug
